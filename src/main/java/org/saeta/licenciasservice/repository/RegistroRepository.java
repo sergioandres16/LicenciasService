@@ -23,30 +23,4 @@ public interface RegistroRepository extends JpaRepository<Registro, Integer> {
      * @return Optional con el registro encontrado
      */
     Optional<Registro> findByMac(String mac);
-
-    /**
-     * Busca un registro activo por dirección MAC
-     * @param mac dirección MAC a buscar
-     * @return Optional con el registro encontrado
-     */
-    Optional<Registro> findByMacAndEstado(String mac, String estado);
-
-    /**
-     * Actualiza la fecha y hora de última validación
-     * @param mac dirección MAC
-     * @param fechaHora fecha y hora actual
-     * @return número de registros actualizados
-     */
-    @Modifying
-    @Transactional
-    @Query("UPDATE Registro r SET r.fechaHora = :fechaHora WHERE r.mac = :mac")
-    int actualizarFechaHora(@Param("mac") String mac, @Param("fechaHora") LocalDateTime fechaHora);
-
-    /**
-     * Verifica si existe una licencia activa para una MAC
-     * @param mac dirección MAC
-     * @return true si existe y está activa
-     */
-    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM Registro r WHERE r.mac = :mac AND r.estado = '1'")
-    boolean existeLicenciaActiva(@Param("mac") String mac);
 }

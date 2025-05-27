@@ -69,14 +69,9 @@ public class LicenciaServiceImpl implements LicenciaService {
                         .empresa(registro.getEmpresa())
                         .codigoError(403)
                         .fechaValidacion(LocalDateTime.now().toString())
-                        .ultimaValidacion(registro.getFechaHora().toString())
+                        .ultimaValidacion(registro.getFechaHora() != null ? registro.getFechaHora().toString() : null)
                         .build();
             }
-
-            // Actualizar fecha de último acceso
-            registro.setFechaHora(LocalDateTime.now());
-            registroRepository.save(registro);
-
             // Licencia válida
             return ValidacionResponse.builder()
                     .valido(true)
@@ -84,7 +79,7 @@ public class LicenciaServiceImpl implements LicenciaService {
                     .estado("ACTIVO")
                     .empresa(registro.getEmpresa())
                     .fechaValidacion(LocalDateTime.now().toString())
-                    .ultimaValidacion(registro.getFechaHora().toString())
+                    .ultimaValidacion(registro.getFechaHora() != null ? registro.getFechaHora().toString() : null)
                     .mac(macNormalizada)
                     .build();
 
