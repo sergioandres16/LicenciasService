@@ -31,7 +31,8 @@ public class Registro {
     @Column(name = "fechaHora", columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private LocalDateTime fechaHora;
 
-    @Column(name = "estado", length = 1)
+    // Cambio aquí: especificar que es CHAR(1) en lugar de VARCHAR(1)
+    @Column(name = "estado", columnDefinition = "CHAR(1)")
     private String estado;
 
     /**

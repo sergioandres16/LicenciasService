@@ -1,8 +1,5 @@
 package org.saeta.licenciasservice.exception;
 
-/**
- * Excepción personalizada para errores de licencia
- */
 public class LicenciaException extends RuntimeException {
 
     public LicenciaException(String message) {
