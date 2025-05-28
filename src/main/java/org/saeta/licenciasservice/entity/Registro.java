@@ -28,10 +28,10 @@ public class Registro {
     @Column(name = "mac")
     private String mac;
 
-    @Column(name = "fechaHora", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    // SOLUCIÓN: Usar comillas dobles para preservar el case exacto
+    @Column(name = "\"fechaHora\"")
     private LocalDateTime fechaHora;
 
-    // Cambio aquí: especificar que es CHAR(1) en lugar de VARCHAR(1)
     @Column(name = "estado", columnDefinition = "CHAR(1)")
     private String estado;
 

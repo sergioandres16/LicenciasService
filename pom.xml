@@ -6,14 +6,14 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.1.5</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <relativePath/>
     </parent>
     <groupId>org.saeta</groupId>
     <artifactId>LicenciasService</artifactId>
     <version>1.0.0</version>
     <packaging>war</packaging>
     <name>LicenciasService</name>
-    <description>Servicio de validación de licencias</description>
+    <description>Servicio de validación de licencias con autenticación JWT</description>
 
     <properties>
         <java.version>17</java.version>
@@ -23,6 +23,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.resources.encoding>UTF-8</maven.resources.encoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <auth0.jwt.version>4.3.0</auth0.jwt.version>
     </properties>
 
     <dependencies>
@@ -44,8 +45,25 @@
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-tomcat</artifactId>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
+        <!-- Auth0 Java JWT -->
+        <dependency>
+            <groupId>com.auth0</groupId>
+            <artifactId>java-jwt</artifactId>
+            <version>${auth0.jwt.version}</version>
         </dependency>
 
         <!-- PostgreSQL Driver -->
@@ -116,7 +134,7 @@
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
-                <filtering>true</filtering>   <!-- o false si NO necesitas reemplazos -->
+                <filtering>true</filtering>
             </resource>
         </resources>
     </build>
