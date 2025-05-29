@@ -67,7 +67,7 @@ public class LicenciaServiceImpl implements LicenciaService {
 
                 return ValidacionResponse.builder()
                         .valido(false)
-                        .mensaje("Licencia vencida por tiempo (" + licencia.getVigenciaDias() + " días)")
+                        .mensaje("Licencia vencida (vigencia: " + licencia.getVigencia() + ")")
                         .mac(macNormalizada)
                         .estado("VENCIDO")
                         .empresa(licencia.getEmpresa())
@@ -90,10 +90,22 @@ public class LicenciaServiceImpl implements LicenciaService {
             }
 
             // Licencia válida
-            long diasRestantes = licencia.getDiasRestantes();
-            String mensajeVigencia = diasRestantes > 30 ?
-                    "Licencia válida (válida por " + diasRestantes + " días más)" :
-                    "Licencia válida (¡ATENCIÓN! Vence en " + diasRestantes + " días)";
+            String mensajeVigencia = "Licencia válida";
+            if (licencia.getVigencia() != null && !licencia.getVigencia().isEmpty()) {
+                long diasRestantes = licencia.getDiasRestantes();
+                if (diasRestantes > 30) {
+                    mensajeVigencia = "Licencia válida (vigencia: " + licencia.getVigencia() + ")";
+                } else if (diasRestantes > 0) {
+                    mensajeVigencia = "Licencia válida (¡ATENCIÓN! Vence en " + diasRestantes + " días)";
+                } else {
+                    var tiempo = licencia.getTiempoRestanteDetallado();
+                    if (tiempo.getHoras() > 0) {
+                        mensajeVigencia = "Licencia válida (¡ATENCIÓN! Vence en " + tiempo.getHoras() + " horas)";
+                    } else {
+                        mensajeVigencia = "Licencia válida (¡ATENCIÓN! Vence en " + tiempo.getMinutos() + " minutos)";
+                    }
+                }
+            }
 
             return ValidacionResponse.builder()
                     .valido(true)

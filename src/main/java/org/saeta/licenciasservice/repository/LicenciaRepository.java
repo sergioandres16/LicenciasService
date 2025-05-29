@@ -2,6 +2,7 @@ package org.saeta.licenciasservice.repository;
 
 import org.saeta.licenciasservice.entity.Licencia;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface LicenciaRepository extends JpaRepository<Licencia, Integer> {
+public interface LicenciaRepository extends JpaRepository<Licencia, Integer>, JpaSpecificationExecutor<Licencia> {
 
     /**
      * Busca una licencia por dirección MAC
@@ -37,33 +38,18 @@ public interface LicenciaRepository extends JpaRepository<Licencia, Integer> {
     List<Licencia> findByEmpresaContainingIgnoreCase(String empresa);
 
     /**
-     * Busca licencias vencidas (fecha_hora + vigencia_dias < now)
-     * @return lista de licencias vencidas que aún tienen estado '1'
+     * Busca licencias vencidas
+     * Nota: Esta query ahora necesita evaluar el campo vigencia texto
+     * Se recomienda usar el servicio para esta lógica
      */
-    @Query("SELECT l FROM Licencia l WHERE l.estado = '1' AND " +
-            "l.fechaHora IS NOT NULL AND l.vigenciaDias IS NOT NULL AND " +
-            "FUNCTION('DATE_ADD', l.fechaHora, l.vigenciaDias, 'DAY') < CURRENT_TIMESTAMP")
-    List<Licencia> findLicenciasVencidas();
+    @Query("SELECT l FROM Licencia l WHERE l.estado = '1' AND l.fechaHora IS NOT NULL")
+    List<Licencia> findLicenciasActivas();
 
     /**
-     * Actualiza el estado de licencias vencidas a '0'
-     * @return número de registros actualizados
+     * Actualiza el estado de una licencia específica
      */
     @Modifying
     @Transactional
-    @Query("UPDATE Licencia l SET l.estado = '0' WHERE l.estado = '1' AND " +
-            "l.fechaHora IS NOT NULL AND l.vigenciaDias IS NOT NULL AND " +
-            "FUNCTION('DATE_ADD', l.fechaHora, l.vigenciaDias, 'DAY') < CURRENT_TIMESTAMP")
-    int desactivarLicenciasVencidas();
-
-    /**
-     * Busca licencias que vencen en los próximos N días
-     * @param dias número de días para la alerta
-     * @return lista de licencias próximas a vencer
-     */
-    @Query("SELECT l FROM Licencia l WHERE l.estado = '1' AND " +
-            "l.fechaHora IS NOT NULL AND l.vigenciaDias IS NOT NULL AND " +
-            "FUNCTION('DATE_ADD', l.fechaHora, l.vigenciaDias, 'DAY') BETWEEN CURRENT_TIMESTAMP AND " +
-            "FUNCTION('DATE_ADD', CURRENT_TIMESTAMP, :dias, 'DAY')")
-    List<Licencia> findLicenciasProximasAVencer(@Param("dias") int dias);
+    @Query("UPDATE Licencia l SET l.estado = :estado WHERE l.id = :id")
+    int actualizarEstado(@Param("id") Integer id, @Param("estado") String estado);
 }
