@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -146,6 +147,17 @@ public class LicenciaServiceImpl implements LicenciaService {
      * Método para limpiar licencias vencidas automáticamente
      */
     public int limpiarLicenciasVencidas() {
-        return licenciaRepository.desactivarLicenciasVencidas();
+        List<Licencia> licenciasActivas = licenciaRepository.findLicenciasActivas();
+        int count = 0;
+
+        for (Licencia licencia : licenciasActivas) {
+            if (licencia.hasVencido()) {
+                licencia.setEstado("0");
+                licenciaRepository.save(licencia);
+                count++;
+            }
+        }
+
+        return count;
     }
 }
