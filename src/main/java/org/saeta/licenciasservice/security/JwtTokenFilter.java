@@ -41,11 +41,6 @@ public class JwtTokenFilter extends OncePerRequestFilter {
             return true;
         }
 
-        // No filtrar health checks
-        if (path.startsWith("/health") || path.startsWith("/actuator")) {
-            return true;
-        }
-
         return false;
     }
 

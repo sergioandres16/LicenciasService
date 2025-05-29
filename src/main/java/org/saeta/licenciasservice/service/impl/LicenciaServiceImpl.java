@@ -2,8 +2,8 @@ package org.saeta.licenciasservice.service.impl;
 
 import org.saeta.licenciasservice.dto.ValidacionRequest;
 import org.saeta.licenciasservice.dto.ValidacionResponse;
-import org.saeta.licenciasservice.entity.Registro;
-import org.saeta.licenciasservice.repository.RegistroRepository;
+import org.saeta.licenciasservice.entity.Licencia;
+import org.saeta.licenciasservice.repository.LicenciaRepository;
 import org.saeta.licenciasservice.service.LicenciaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 public class LicenciaServiceImpl implements LicenciaService {
 
     @Autowired
-    private RegistroRepository registroRepository;
+    private LicenciaRepository licenciaRepository;
 
     // Patrón para validar formato MAC (acepta : y -)
     private static final Pattern MAC_PATTERN = Pattern.compile(
@@ -44,9 +44,9 @@ public class LicenciaServiceImpl implements LicenciaService {
             String macNormalizada = normalizarMac(mac);
 
             // Buscar en base de datos
-            Optional<Registro> registroOpt = registroRepository.findByMac(macNormalizada);
+            Optional<Licencia> licenciaOpt = licenciaRepository.findByMac(macNormalizada);
 
-            if (registroOpt.isEmpty()) {
+            if (licenciaOpt.isEmpty()) {
                 return ValidacionResponse.builder()
                         .valido(false)
                         .mensaje("Licencia no registrada")
@@ -57,29 +57,50 @@ public class LicenciaServiceImpl implements LicenciaService {
                         .build();
             }
 
-            Registro registro = registroOpt.get();
+            Licencia licencia = licenciaOpt.get();
+
+            // Verificar si la licencia ha vencido por tiempo
+            if (licencia.hasVencido()) {
+                // Actualizar estado a inactivo si venció
+                licencia.setEstado("0");
+                licenciaRepository.save(licencia);
+
+                return ValidacionResponse.builder()
+                        .valido(false)
+                        .mensaje("Licencia vencida por tiempo (" + licencia.getVigenciaDias() + " días)")
+                        .mac(macNormalizada)
+                        .estado("VENCIDO")
+                        .empresa(licencia.getEmpresa())
+                        .codigoError(403)
+                        .fechaValidacion(LocalDateTime.now().toString())
+                        .build();
+            }
 
             // Verificar si está activa (estado = '1')
-            if (!"1".equals(registro.getEstado())) {
+            if (!"1".equals(licencia.getEstado())) {
                 return ValidacionResponse.builder()
                         .valido(false)
                         .mensaje("Licencia inactiva")
                         .mac(macNormalizada)
                         .estado("INACTIVO")
-                        .empresa(registro.getEmpresa())
+                        .empresa(licencia.getEmpresa())
                         .codigoError(403)
                         .fechaValidacion(LocalDateTime.now().toString())
-                        .ultimaValidacion(registro.getFechaHora() != null ? registro.getFechaHora().toString() : null)
                         .build();
             }
+
             // Licencia válida
+            long diasRestantes = licencia.getDiasRestantes();
+            String mensajeVigencia = diasRestantes > 30 ?
+                    "Licencia válida (válida por " + diasRestantes + " días más)" :
+                    "Licencia válida (¡ATENCIÓN! Vence en " + diasRestantes + " días)";
+
             return ValidacionResponse.builder()
                     .valido(true)
-                    .mensaje("Licencia válida")
+                    .mensaje(mensajeVigencia)
                     .estado("ACTIVO")
-                    .empresa(registro.getEmpresa())
+                    .empresa(licencia.getEmpresa())
                     .fechaValidacion(LocalDateTime.now().toString())
-                    .ultimaValidacion(registro.getFechaHora() != null ? registro.getFechaHora().toString() : null)
                     .mac(macNormalizada)
                     .build();
 
@@ -107,5 +128,12 @@ public class LicenciaServiceImpl implements LicenciaService {
      */
     private String normalizarMac(String mac) {
         return mac.trim().replace(":", "-").toUpperCase();
+    }
+
+    /**
+     * Método para limpiar licencias vencidas automáticamente
+     */
+    public int limpiarLicenciasVencidas() {
+        return licenciaRepository.desactivarLicenciasVencidas();
     }
 }
