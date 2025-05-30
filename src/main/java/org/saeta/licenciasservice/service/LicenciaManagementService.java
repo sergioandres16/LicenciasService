@@ -57,6 +57,9 @@ public class LicenciaManagementService {
         Licencia licencia = licenciaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Licencia no encontrada con ID: " + id));
 
+        // Guardar el estado anterior para comparación
+        String estadoAnterior = licencia.getEstado();
+
         // Verificar si la nueva MAC ya existe en otra licencia
         if (request.getMac() != null && !request.getMac().isEmpty()) {
             String macNormalizada = normalizarMac(request.getMac());
@@ -76,6 +79,11 @@ public class LicenciaManagementService {
 
         if (request.getEstado() != null) {
             licencia.setEstado(request.getEstado());
+
+            // Si se cambia de inactivo (0) a activo (1), resetear la fecha
+            if ("0".equals(estadoAnterior) && "1".equals(request.getEstado())) {
+                licencia.setFechaHora(LocalDateTime.now());
+            }
         }
 
         if (request.getObservacion() != null) {
@@ -85,6 +93,11 @@ public class LicenciaManagementService {
         if (request.getVigenciaValor() != null && request.getVigenciaUnidad() != null) {
             String vigenciaTexto = construirVigenciaTexto(request.getVigenciaValor(), request.getVigenciaUnidad());
             licencia.setVigencia(vigenciaTexto);
+
+            // Si se está actualizando la vigencia y se está activando, resetear la fecha
+            if ("0".equals(estadoAnterior) && "1".equals(request.getEstado())) {
+                licencia.setFechaHora(LocalDateTime.now());
+            }
         }
 
         Licencia updated = licenciaRepository.save(licencia);
@@ -122,7 +135,8 @@ public class LicenciaManagementService {
         TiempoRestanteDTO tiempoRestante = null;
         boolean vencido = false;
 
-        if (licencia.getFechaHora() != null && licencia.getVigencia() != null) {
+        // Solo calcular tiempo restante si la licencia está activa
+        if (licencia.isActivo() && licencia.getFechaHora() != null && licencia.getVigencia() != null) {
             Integer minutos = licencia.getVigenciaEnMinutos();
             if (minutos != null && minutos > 0) {
                 fechaVencimiento = licencia.getFechaHora().plusMinutes(minutos);
@@ -141,6 +155,17 @@ public class LicenciaManagementService {
             }
         }
 
+        // Si está inactivo, establecer valores por defecto
+        if (!licencia.isActivo()) {
+            tiempoRestante = TiempoRestanteDTO.builder()
+                    .dias(0)
+                    .horas(0)
+                    .minutos(0)
+                    .totalMinutos(0)
+                    .build();
+            vencido = false; // Una licencia inactiva no se considera vencida
+        }
+
         return LicenciaDTO.builder()
                 .id(licencia.getId())
                 .empresa(licencia.getEmpresa())
@@ -154,7 +179,7 @@ public class LicenciaManagementService {
                 .horasRestantes(horasRestantes)
                 .minutosRestantes(minutosRestantes)
                 .tiempoRestante(tiempoRestante)
-                .activo("1".equals(licencia.getEstado()))
+                .activo(licencia.isActivo())
                 .vencido(vencido)
                 .build();
     }

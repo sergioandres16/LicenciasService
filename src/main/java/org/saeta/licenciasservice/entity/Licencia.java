@@ -60,21 +60,29 @@ public class Licencia {
             return null;
         }
 
-        // Patrón para extraer número y unidad
-        Pattern pattern = Pattern.compile("(\\d+)\\s*(hora|horas|día|dias|día|días|semana|semanas|mes|meses|año|anos|año|años)", Pattern.CASE_INSENSITIVE);
+        // Patrón mejorado para capturar todas las variaciones posibles
+        Pattern pattern = Pattern.compile("(\\d+)\\s*(hora|horas|día|dias|día|días|semana|semanas|mes|meses|año|anos|año|años)", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         Matcher matcher = pattern.matcher(vigencia.trim());
 
         if (matcher.find()) {
             int valor = Integer.parseInt(matcher.group(1));
             String unidad = matcher.group(2).toLowerCase();
 
-            // Normalizar unidades al singular
-            if (unidad.endsWith("s")) {
+            // Log para debugging
+            System.out.println("Vigencia: " + vigencia + " -> Valor: " + valor + ", Unidad: " + unidad);
+
+            // Normalizar la unidad removiendo la 's' del plural
+            if (unidad.endsWith("s") && !unidad.equals("mes")) {
                 unidad = unidad.substring(0, unidad.length() - 1);
             }
 
             // Normalizar acentos
             unidad = unidad.replace("í", "i").replace("ñ", "n");
+
+            // Manejar el caso especial de "mes" y "meses"
+            if (unidad.equals("mese")) {
+                unidad = "mes";
+            }
 
             switch (unidad) {
                 case "hora":
@@ -84,11 +92,12 @@ public class Licencia {
                 case "semana":
                     return valor * 7 * 24 * 60;
                 case "mes":
-                case "mese":
+                case "meses":  // Agregar explícitamente "meses"
                     return valor * 30 * 24 * 60;
                 case "ano":
                     return valor * 365 * 24 * 60;
                 default:
+                    System.err.println("Unidad no reconocida: " + unidad);
                     return null;
             }
         }
@@ -100,6 +109,10 @@ public class Licencia {
      * Verifica si la licencia ha vencido
      */
     public boolean hasVencido() {
+        if (!isActivo()) {
+            return false; // Si está inactivo, no se considera vencido
+        }
+
         if (fechaHora == null || vigencia == null) {
             return true;
         }
@@ -117,7 +130,7 @@ public class Licencia {
      * Calcula el tiempo restante
      */
     public TiempoRestante getTiempoRestanteDetallado() {
-        if (fechaHora == null || vigencia == null) {
+        if (!isActivo() || fechaHora == null || vigencia == null) {
             return new TiempoRestante(0, 0, 0, 0);
         }
 
@@ -127,14 +140,28 @@ public class Licencia {
         }
 
         LocalDateTime fechaVencimiento = fechaHora.plusMinutes(minutos);
-        Duration duration = Duration.between(LocalDateTime.now(), fechaVencimiento);
+        LocalDateTime ahora = LocalDateTime.now();
 
+        // Si ya venció
+        if (ahora.isAfter(fechaVencimiento)) {
+            Duration duration = Duration.between(fechaVencimiento, ahora);
+            long totalMinutos = -duration.toMinutes(); // Negativo porque ya pasó
+            return new TiempoRestante(0, 0, 0, totalMinutos);
+        }
+
+        // Si aún tiene vigencia
+        Duration duration = Duration.between(ahora, fechaVencimiento);
         long totalMinutos = duration.toMinutes();
+
+        if (totalMinutos <= 0) {
+            return new TiempoRestante(0, 0, 0, 0);
+        }
+
         long dias = totalMinutos / (24 * 60);
-        long horas = (totalMinutos % (24 * 60)) / 60;
+        long horasRestantes = (totalMinutos % (24 * 60)) / 60;
         long minutosRestantes = totalMinutos % 60;
 
-        return new TiempoRestante(dias, horas, minutosRestantes, totalMinutos);
+        return new TiempoRestante(dias, horasRestantes, minutosRestantes, totalMinutos);
     }
 
     /**
@@ -146,15 +173,15 @@ public class Licencia {
     }
 
     /**
-     * Obtiene las horas restantes
+     * Obtiene las horas restantes totales
      */
     public long getHorasRestantes() {
         TiempoRestante tiempo = getTiempoRestanteDetallado();
-        return tiempo.getTotalMinutos() / 60;
+        return Math.max(0, tiempo.getTotalMinutos() / 60);
     }
 
     /**
-     * Obtiene los minutos restantes
+     * Obtiene los minutos restantes totales
      */
     public long getMinutosRestantes() {
         TiempoRestante tiempo = getTiempoRestanteDetallado();

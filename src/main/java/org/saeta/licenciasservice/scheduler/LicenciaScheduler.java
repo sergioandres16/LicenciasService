@@ -19,11 +19,7 @@ public class LicenciaScheduler {
     @Autowired
     private LicenciaRepository licenciaRepository;
 
-    /**
-     * Ejecuta cada hora para desactivar licencias vencidas
-     * Cron: segundo(0) minuto(0) hora(*) día(*) mes(*) año(*)
-     */
-    @Scheduled(cron = "0 0 * * * *")
+    @Scheduled(cron = "0 */5 * * * *")
     public void limpiarLicenciasVencidas() {
         try {
             // Obtener todas las licencias activas
