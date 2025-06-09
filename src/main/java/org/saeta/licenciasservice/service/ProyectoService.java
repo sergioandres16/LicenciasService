@@ -437,6 +437,83 @@ public class ProyectoService {
         return LocalDateTime.now();
     }
 
+    public Page<ProyectoDTO> buscarProyectosPorEstado(String idProducto, String producto, String correo, String estado, Pageable pageable) {
+        Specification<Proyecto> spec = Specification.where(null);
+
+        if (idProducto != null && !idProducto.trim().isEmpty()) {
+            spec = spec.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("idProducto")), "%" + idProducto.toLowerCase() + "%"));
+        }
+
+        if (producto != null && !producto.trim().isEmpty()) {
+            spec = spec.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("producto")), "%" + producto.toLowerCase() + "%"));
+        }
+
+        if (correo != null && !correo.trim().isEmpty()) {
+            spec = spec.and((root, query, cb) ->
+                    cb.or(
+                            cb.like(cb.lower(root.get("correoVendedor1")), "%" + correo.toLowerCase() + "%"),
+                            cb.like(cb.lower(root.get("correoVendedor2")), "%" + correo.toLowerCase() + "%"),
+                            cb.like(cb.lower(root.get("correoJefeVendedor")), "%" + correo.toLowerCase() + "%")
+                    ));
+        }
+
+        // Filtrar por estado
+        if (estado != null && !estado.trim().isEmpty()) {
+            switch (estado.toUpperCase()) {
+                case "ACTIVO":
+                    spec = spec.and((root, query, cb) ->
+                            cb.and(
+                                    cb.isTrue(root.get("activo")),
+                                    cb.greaterThan(root.get("vigenciaRestante"), 60)
+                            ));
+                    break;
+
+                case "PROXIMO_VENCER":
+                    spec = spec.and((root, query, cb) ->
+                            cb.and(
+                                    cb.isTrue(root.get("activo")),
+                                    cb.greaterThan(root.get("vigenciaRestante"), 30),
+                                    cb.lessThanOrEqualTo(root.get("vigenciaRestante"), 60)
+                            ));
+                    break;
+
+                case "CRITICO":
+                    spec = spec.and((root, query, cb) ->
+                            cb.and(
+                                    cb.isTrue(root.get("activo")),
+                                    cb.greaterThan(root.get("vigenciaRestante"), 0),
+                                    cb.lessThanOrEqualTo(root.get("vigenciaRestante"), 30)
+                            ));
+                    break;
+
+                case "VENCIDO":
+                    spec = spec.and((root, query, cb) ->
+                            cb.or(
+                                    cb.isNull(root.get("vigenciaRestante")),
+                                    cb.lessThanOrEqualTo(root.get("vigenciaRestante"), 0)
+                            ));
+                    break;
+
+                case "INACTIVO":
+                    spec = spec.and((root, query, cb) ->
+                            cb.isFalse(root.get("activo")));
+                    break;
+
+                case "SIN_DATOS":
+                    spec = spec.and((root, query, cb) ->
+                            cb.and(
+                                    cb.isTrue(root.get("activo")),
+                                    cb.isNull(root.get("vigenciaRestante"))
+                            ));
+                    break;
+            }
+        }
+
+        return proyectoRepository.findAll(spec, pageable).map(this::convertToDTO);
+    }
+
     /**
      * Envía correo de alerta
      */

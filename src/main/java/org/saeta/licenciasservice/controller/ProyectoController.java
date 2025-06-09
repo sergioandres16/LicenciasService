@@ -67,6 +67,23 @@ public class ProyectoController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
         }
     }
+    // Agrega este método al ProyectoController.java después del método buscarProyectos existente
+
+    @GetMapping("/search-by-estado")
+    @Operation(summary = "Buscar proyectos por estado", description = "Busca proyectos por diferentes criterios incluyendo estado")
+    public ResponseEntity<Page<ProyectoDTO>> buscarProyectosPorEstado(
+            @RequestParam(required = false) String idProducto,
+            @RequestParam(required = false) String producto,
+            @RequestParam(required = false) String correo,
+            @RequestParam(required = false) String estado,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        Page<ProyectoDTO> proyectos = proyectoService.buscarProyectosPorEstado(idProducto, producto, correo, estado, pageable);
+
+        return ResponseEntity.ok(proyectos);
+    }
 
     @PostMapping
     @Operation(summary = "Crear proyecto", description = "Crea un nuevo proyecto")
